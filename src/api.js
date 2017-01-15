@@ -106,9 +106,13 @@ var RelayServer = (function() {
                 config.auth = param.auth;
             }
             const resp = await this._http(config);
+            console.log('HTTP response: status', resp.status)
+            console.log('HTTP response: statusText', resp.statusText)
+            console.log('HTTP response: data', resp.data)
+
             if (param.validateResponse &&
                 !validateResponse(resp.data, param.validateResponse)) {
-                throw new Error(`Invalid server response for: ${param.call}`);
+                throw new Error(`Invalid server response for: ${param.call}\n${resp}`);
             }
             return resp.data;
         },
@@ -131,12 +135,45 @@ var RelayServer = (function() {
             this._password = password;
         },
 
-        requestVerificationSMS: function(number) {
+        setCcsm: function(number, password, registrationId) {
+            console.log('Api:setCcsm', number)
+
+            const auth = {
+                username: number,
+                password
+            }
+
+            const jsonData = {
+                ccsmRegistrationId: `${number}:${registrationId}`,
+                isWebSocketChannel: false
+            }
+
+            console.log('Api:setCcsm registering', `${number}:${registrationId}`)
             return this.http({
+                call: 'accounts',
+                httpType: 'PUT',
+                urlParameters: '/ccsm/',
+                auth,
+                jsonData
+            })
+        },
+
+        requestVerificationSMS: function(number) {
+            console.log('Api:requestVerificationSMS', number)
+            const res = this.http({
                 call: 'accounts',
                 httpType: 'GET',
                 urlParameters: '/sms/code/' + number,
             });
+
+           res.then(
+                (result) => {
+                    console.log('Api:requestVerificationSMS promise result:', result)
+                }
+            )
+
+            console.log('Api:requestVerificationSMS res:', res)
+            return res
         },
 
         requestVerificationVoice: function(number) {
@@ -320,11 +357,12 @@ var RelayServer = (function() {
         },
 
         getMessageSocket: function() {
-            console.log('Opening message websocket:', this.base_url);
+            // console.log('Opening message websocket:', this.base_url);
             const url = this.base_url.replace('https://', 'wss://').replace('http://', 'ws://')
                     + '/v1/websocket/?login=' + encodeURIComponent(this._username)
                     + '&password=' + encodeURIComponent(this._password)
                     + '&agent=OWD';
+            console.log('Opening message websocket:', url);
             return new WebSocket(url);
         },
 

@@ -45,20 +45,26 @@ class MessageReceiver extends EventEmitter {
             this.socket.close();
         }
         this.socket = this.server.getMessageSocket();
+        console.log('Got new socket:', this.socket)
         this.socket.onclose = this.onclose.bind(this);
         this.socket.onerror = this.onerror.bind(this);
+        console.log('Creating websocket resource...')
         this.wsr = new WebSocketResource(this.socket, {
             handleRequest: this.handleRequest.bind(this),
             keepalive: { path: '/v1/keepalive', disconnect: true }
         });
+        console.log('MessageRecever connect done')
     }
 
-    close() {
+    close(...args) {
+        console.log('websocket close', args);
         this.socket.close(3000, 'called close');
     }
 
     onerror(error) {
         console.log('websocket error', error);
+        console.log('websocket error msg', error.message);
+        this.emit('error', error)
         this._wait_reject(error);
     }
 

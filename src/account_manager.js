@@ -26,12 +26,28 @@ class AccountManager extends EventEmitter {
     }
 
     requestSMSVerification(number) {
-        return this.server.requestVerificationSMS(number);
+        console.log('AccountManager:requestSMSVerification', number)
+        const res = this.server.requestVerificationSMS(number);
+        console.log('AccountManager:requestSMSVerification res:', res)
+        return res
     }
 
-    async registerSingleDevice(number, verificationCode) {
+    async registerSingleDevice(number, verificationCode, registerCcsm) {
         const identityKeyPair = libsignal.KeyHelper.generateIdentityKeyPair();
         await this.createAccount(number, verificationCode, identityKeyPair);
+        console.log('registerSingleDevice account created and verified')
+
+        if (registerCcsm) {
+            const password = await storage.get_item('password')
+            const registrationId = await storage.get_item('registrationId')
+            try {
+                await this.server.setCcsm(number, password, registrationId)
+            } catch(e) {
+                console.error('Registration CCSM push service error', e)
+                throw Error(e)
+            }
+        }
+
         const keys = await this.generateKeys(100);
         await this.server.registerKeys(keys);
     }
